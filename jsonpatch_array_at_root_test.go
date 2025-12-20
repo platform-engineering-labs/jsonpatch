@@ -27,7 +27,7 @@ func TestJSONPatchCreate_ObjectRoot(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := CreatePatch([]byte(tc.a), []byte(tc.b), collections, PatchStrategyExactMatch)
+			_, err := CreatePatch([]byte(tc.a), []byte(tc.b), collections, nil, PatchStrategyExactMatch)
 			assert.NoError(t, err)
 		})
 	}
@@ -57,7 +57,7 @@ func TestJSONPatchCreate_ArrayRoot(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := CreatePatch([]byte(tc.a), []byte(tc.b), collections, PatchStrategyExactMatch)
+			_, err := CreatePatch([]byte(tc.a), []byte(tc.b), collections, nil, PatchStrategyExactMatch)
 			assert.NoError(t, err)
 		})
 	}

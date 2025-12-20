@@ -24,13 +24,14 @@ var nestedObjPrimitiveSet = `{"a":100, "b":{"c":[200]}}`
 var nestedObjAddPrimitiveSetItem = `{"b":{"c":[250]}}`
 
 var setTestCollections = Collections{
-	EntitySets:    EntitySets{},
-	Arrays:        []Path{},           // No arrays in this test, only sets
-	IgnoredFields: []Path{"$.b[*].d"}, // Ignored property for object sets
+	EntitySets: EntitySets{},
+	Arrays:     []Path{}, // No arrays in this test, only sets
 }
 
+var setTestIgnoredFields = []Path{"$.b[*].d"} // Ignored property for object sets
+
 func TestCreatePatch_AddItemToEmptyPrimitiveSetInEnsureExistsMode_GeneratesAddOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjEmtpyPrmitiveSet), []byte(simpleObjAddSingleItemToPrimitiveSet), setTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(simpleObjEmtpyPrmitiveSet), []byte(simpleObjAddSingleItemToPrimitiveSet), setTestCollections, setTestIgnoredFields, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -41,7 +42,7 @@ func TestCreatePatch_AddItemToEmptyPrimitiveSetInEnsureExistsMode_GeneratesAddOp
 }
 
 func TestCreatePatch_AddItemToEmptyPrimitiveSetInEnsureExactMatchMode_GeneratesAddOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjEmtpyPrmitiveSet), []byte(simpleObjAddSingleItemToPrimitiveSet), setTestCollections, PatchStrategyExactMatch)
+	patch, err := CreatePatch([]byte(simpleObjEmtpyPrmitiveSet), []byte(simpleObjAddSingleItemToPrimitiveSet), setTestCollections, setTestIgnoredFields, PatchStrategyExactMatch)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -52,7 +53,7 @@ func TestCreatePatch_AddItemToEmptyPrimitiveSetInEnsureExactMatchMode_GeneratesA
 }
 
 func TestCreatePatch_AddItemToPrimitiveSetWithOneItemInEnsureExistsMode_GeneratesAddOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjPrimitiveSetWithOneItem), []byte(simpleObjAddSingleItemToPrimitiveSet), setTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(simpleObjPrimitiveSetWithOneItem), []byte(simpleObjAddSingleItemToPrimitiveSet), setTestCollections, setTestIgnoredFields, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -63,7 +64,7 @@ func TestCreatePatch_AddItemToPrimitiveSetWithOneItemInEnsureExistsMode_Generate
 }
 
 func TestCreatePatch_AddItemToPrimitiveSetWithOneItemInExactMatchMode_GeneratesARemoveAndAnAddOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjPrimitiveSetWithOneItem), []byte(simpleObjAddSingleItemToPrimitiveSet), setTestCollections, PatchStrategyExactMatch)
+	patch, err := CreatePatch([]byte(simpleObjPrimitiveSetWithOneItem), []byte(simpleObjAddSingleItemToPrimitiveSet), setTestCollections, setTestIgnoredFields, PatchStrategyExactMatch)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(patch), "they should be equal")
 	change := patch[0]
@@ -77,7 +78,7 @@ func TestCreatePatch_AddItemToPrimitiveSetWithOneItemInExactMatchMode_GeneratesA
 }
 
 func TestCreatePatch_AddItemToPrimitiveSetWithMultipleItems_InEnsureExistsMode_GeneratesAddOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjPrimitiveSetWithMultipleItems), []byte(simpleObjAddSingleItemToPrimitiveSet), setTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(simpleObjPrimitiveSetWithMultipleItems), []byte(simpleObjAddSingleItemToPrimitiveSet), setTestCollections, setTestIgnoredFields, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -88,7 +89,7 @@ func TestCreatePatch_AddItemToPrimitiveSetWithMultipleItems_InEnsureExistsMode_G
 }
 
 func TestCreatePatch_AddItemToPrimitiveSetWithMultipleItems_InExactMatchMode_GeneratesTwoRemovesAndOneAddOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjPrimitiveSetWithMultipleItems), []byte(simpleObjAddSingleItemToPrimitiveSet), setTestCollections, PatchStrategyExactMatch)
+	patch, err := CreatePatch([]byte(simpleObjPrimitiveSetWithMultipleItems), []byte(simpleObjAddSingleItemToPrimitiveSet), setTestCollections, setTestIgnoredFields, PatchStrategyExactMatch)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(patch), "they should be equal")
 	change := patch[0]
@@ -105,7 +106,7 @@ func TestCreatePatch_AddItemToPrimitiveSetWithMultipleItems_InExactMatchMode_Gen
 }
 
 func TestCreatePatch_AddMultipleItemsToPrimitiveSetWithMultipleItems_InEnsureExistsMode_GeneratesTwoAddOperations(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjPrimitiveSetWithMultipleItems), []byte(simpleObjAddMultipleItemsToPrimitiveSet), setTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(simpleObjPrimitiveSetWithMultipleItems), []byte(simpleObjAddMultipleItemsToPrimitiveSet), setTestCollections, setTestIgnoredFields, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(patch), "they should be equal")
 	change := patch[0]
@@ -121,7 +122,7 @@ func TestCreatePatch_AddMultipleItemsToPrimitiveSetWithMultipleItems_InEnsureExi
 }
 
 func TestCreatePatch_AddMultipleItemsToPrimitiveSetWithMultipleItems_InExactMatchMode_GeneratesTwoRemovesAndTwoAddOperations(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjPrimitiveSetWithMultipleItems), []byte(simpleObjAddMultipleItemsToPrimitiveSet), setTestCollections, PatchStrategyExactMatch)
+	patch, err := CreatePatch([]byte(simpleObjPrimitiveSetWithMultipleItems), []byte(simpleObjAddMultipleItemsToPrimitiveSet), setTestCollections, setTestIgnoredFields, PatchStrategyExactMatch)
 	assert.NoError(t, err)
 	assert.Equal(t, 4, len(patch), "they should be equal")
 	change := patch[0]
@@ -143,13 +144,13 @@ func TestCreatePatch_AddMultipleItemsToPrimitiveSetWithMultipleItems_InExactMatc
 }
 
 func TestCreatePatch_AddDuplicateItemToPrimitiveSetWithOneMultipleItems_InEnsureExistsMode_GeneratesNoOperations(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjPrimitiveSetWithMultipleItems), []byte(simpleObjAddDuplicateItemToPrimitiveSet), setTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(simpleObjPrimitiveSetWithMultipleItems), []byte(simpleObjAddDuplicateItemToPrimitiveSet), setTestCollections, setTestIgnoredFields, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(patch), "they should be equal")
 }
 
 func TestCreatePatch_AddDuplicateItemToPrimitiveSetWithOneMultipleItems_InExactMatchMode_GeneratesARemoveOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjPrimitiveSetWithMultipleItems), []byte(simpleObjAddDuplicateItemToPrimitiveSet), setTestCollections, PatchStrategyExactMatch)
+	patch, err := CreatePatch([]byte(simpleObjPrimitiveSetWithMultipleItems), []byte(simpleObjAddDuplicateItemToPrimitiveSet), setTestCollections, setTestIgnoredFields, PatchStrategyExactMatch)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -158,7 +159,7 @@ func TestCreatePatch_AddDuplicateItemToPrimitiveSetWithOneMultipleItems_InExactM
 }
 
 func TestCreatePatch_AddItemToPrimitiveSetInNestedObject_InEnsureExistsMode_GeneratesAddOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(nestedObjPrimitiveSet), []byte(nestedObjAddPrimitiveSetItem), setTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(nestedObjPrimitiveSet), []byte(nestedObjAddPrimitiveSetItem), setTestCollections, setTestIgnoredFields, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -169,7 +170,7 @@ func TestCreatePatch_AddItemToPrimitiveSetInNestedObject_InEnsureExistsMode_Gene
 }
 
 func TestCreatePatch_AddItemToPrimitiveSetInNestedObject_InExactMatchMode_GeneratesAddOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(nestedObjPrimitiveSet), []byte(nestedObjAddPrimitiveSetItem), setTestCollections, PatchStrategyExactMatch)
+	patch, err := CreatePatch([]byte(nestedObjPrimitiveSet), []byte(nestedObjAddPrimitiveSetItem), setTestCollections, setTestIgnoredFields, PatchStrategyExactMatch)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(patch), "they should be equal")
 	change := patch[0]
@@ -183,7 +184,7 @@ func TestCreatePatch_AddItemToPrimitiveSetInNestedObject_InExactMatchMode_Genera
 }
 
 func TestCreatePatch_AddItemToObjectSetWithOneItem_InEnsureExistsMode_GeneratesAddOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjSingletonObjectSet), []byte(simpleObjAddObjectSetItem), setTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(simpleObjSingletonObjectSet), []byte(simpleObjAddObjectSetItem), setTestCollections, setTestIgnoredFields, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -194,7 +195,7 @@ func TestCreatePatch_AddItemToObjectSetWithOneItem_InEnsureExistsMode_GeneratesA
 }
 
 func TestCreatePatch_AddItemToObjectSetWithOneItem_InExactMatchMode_GeneratesAddOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjSingletonObjectSet), []byte(simpleObjAddObjectSetItem), setTestCollections, PatchStrategyExactMatch)
+	patch, err := CreatePatch([]byte(simpleObjSingletonObjectSet), []byte(simpleObjAddObjectSetItem), setTestCollections, setTestIgnoredFields, PatchStrategyExactMatch)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(patch), "they should be equal")
 	change := patch[0]
@@ -208,19 +209,19 @@ func TestCreatePatch_AddItemToObjectSetWithOneItem_InExactMatchMode_GeneratesAdd
 }
 
 func TestCreatePatch_AddItemToObjectSetWithOneItemAndIgnoredValue_InEnsureExistsMode_GeneratesNoOperations(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjSingletonObjectSet), []byte(simpleObjAddObjectSetItemWithIgnoredValue), setTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(simpleObjSingletonObjectSet), []byte(simpleObjAddObjectSetItemWithIgnoredValue), setTestCollections, setTestIgnoredFields, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(patch), "they should be equal")
 }
 
 func TestCreatePatch_AddDuplicateItemToObjectSetWithOneItem_InEnsureExistsMode_GeneratesNoOperations(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjSingletonObjectSet), []byte(simpleObjAddDuplicateObjectSetItem), setTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(simpleObjSingletonObjectSet), []byte(simpleObjAddDuplicateObjectSetItem), setTestCollections, setTestIgnoredFields, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(patch), "they should be equal")
 }
 
 func TestCreatePatch_AddDuplicateItemToObjectSetWithOneItem_InExactMatchMode_GeneratesNoOperations(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjSingletonObjectSet), []byte(simpleObjAddDuplicateObjectSetItem), setTestCollections, PatchStrategyExactMatch)
+	patch, err := CreatePatch([]byte(simpleObjSingletonObjectSet), []byte(simpleObjAddDuplicateObjectSetItem), setTestCollections, setTestIgnoredFields, PatchStrategyExactMatch)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(patch), "they should be equal")
 }

@@ -11,7 +11,7 @@ var simpleObjModifyProp = `{"b":250}`
 var simpleObjAddProp = `{"c":"hello"}`
 
 func TestCreatePatch_ModifyProperty_GeneratesReplaceOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObj), []byte(simpleObjModifyProp), setTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(simpleObj), []byte(simpleObjModifyProp), setTestCollections, setTestIgnoredFields, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -22,7 +22,7 @@ func TestCreatePatch_ModifyProperty_GeneratesReplaceOperation(t *testing.T) {
 }
 
 func TestCreatePatch_AddProperty_GeneratesAddOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObj), []byte(simpleObjAddProp), setTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(simpleObj), []byte(simpleObjAddProp), setTestCollections, setTestIgnoredFields, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -32,7 +32,7 @@ func TestCreatePatch_AddProperty_GeneratesAddOperation(t *testing.T) {
 }
 
 func TestCreatePatch_NestedObject_ModifyProperty_GeneratesReplaceOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(nestedObj), []byte(nestedObjModifyProp), setTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(nestedObj), []byte(nestedObjModifyProp), setTestCollections, setTestIgnoredFields, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -43,7 +43,7 @@ func TestCreatePatch_NestedObject_ModifyProperty_GeneratesReplaceOperation(t *te
 }
 
 func TestCreatePatch_NestedObject_AddProperty_GeneratesAddOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(nestedObj), []byte(nestedObjAddProp), setTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(nestedObj), []byte(nestedObjAddProp), setTestCollections, setTestIgnoredFields, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]

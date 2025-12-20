@@ -16,7 +16,7 @@ var simpleG = `{"a":100, "b":null, "d":"foo"}`
 var empty = `{}`
 
 func TestOneNullReplace(t *testing.T) {
-	patch, e := CreatePatch([]byte(simplef), []byte(simpleG), Collections{}, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(simplef), []byte(simpleG), Collections{}, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, len(patch), 1, "they should be equal")
 	change := patch[0]
@@ -26,13 +26,13 @@ func TestOneNullReplace(t *testing.T) {
 }
 
 func TestSame(t *testing.T) {
-	patch, e := CreatePatch([]byte(simpleA), []byte(simpleA), Collections{}, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(simpleA), []byte(simpleA), Collections{}, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, len(patch), 0, "they should be equal")
 }
 
 func TestOneStringReplace(t *testing.T) {
-	patch, e := CreatePatch([]byte(simpleA), []byte(simpleB), Collections{}, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(simpleA), []byte(simpleB), Collections{}, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, len(patch), 1, "they should be equal")
 	change := patch[0]
@@ -42,7 +42,7 @@ func TestOneStringReplace(t *testing.T) {
 }
 
 func TestOneIntReplace(t *testing.T) {
-	patch, e := CreatePatch([]byte(simpleA), []byte(simpleC), Collections{}, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(simpleA), []byte(simpleC), Collections{}, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, len(patch), 1, "they should be equal")
 	change := patch[0]
@@ -53,7 +53,7 @@ func TestOneIntReplace(t *testing.T) {
 }
 
 func TestOneAdd(t *testing.T) {
-	patch, e := CreatePatch([]byte(simpleA), []byte(simpleD), Collections{}, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(simpleA), []byte(simpleD), Collections{}, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, len(patch), 1, "they should be equal")
 	change := patch[0]
@@ -64,7 +64,7 @@ func TestOneAdd(t *testing.T) {
 
 // We never remove properties from objects
 func TestOneRemove(t *testing.T) {
-	patch, e := CreatePatch([]byte(simpleA), []byte(simpleE), Collections{}, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(simpleA), []byte(simpleE), Collections{}, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, len(patch), 0, "they should be equal")
 	// change := patch[0]
@@ -75,7 +75,7 @@ func TestOneRemove(t *testing.T) {
 
 // We never remove properties from objects
 func TestVsEmpty(t *testing.T) {
-	patch, e := CreatePatch([]byte(simpleA), []byte(empty), Collections{}, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(simpleA), []byte(empty), Collections{}, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, len(patch), 0, "they should be equal")
 	// sort.Sort(ByPath(patch))

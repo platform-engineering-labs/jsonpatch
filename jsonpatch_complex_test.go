@@ -18,12 +18,12 @@ var complex_test_collections = Collections{
 }
 
 func TestComplexSame(t *testing.T) {
-	patch, e := CreatePatch([]byte(complexBase), []byte(complexBase), complex_test_collections, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(complexBase), []byte(complexBase), complex_test_collections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, 0, len(patch), "they should be equal")
 }
 func TestComplexOneStringReplaceInArray(t *testing.T) {
-	patch, e := CreatePatch([]byte(complexBase), []byte(complexA), complex_test_collections, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(complexBase), []byte(complexA), complex_test_collections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -33,7 +33,7 @@ func TestComplexOneStringReplaceInArray(t *testing.T) {
 }
 
 func TestComplexOneIntReplace(t *testing.T) {
-	patch, e := CreatePatch([]byte(complexBase), []byte(complexB), complex_test_collections, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(complexBase), []byte(complexB), complex_test_collections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -44,7 +44,7 @@ func TestComplexOneIntReplace(t *testing.T) {
 }
 
 func TestComplexOneAdd(t *testing.T) {
-	patch, e := CreatePatch([]byte(complexBase), []byte(complexC), complex_test_collections, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(complexBase), []byte(complexC), complex_test_collections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -59,7 +59,7 @@ func TestComplexOneAdd(t *testing.T) {
 }
 
 func TestComplexOneAddToArray(t *testing.T) {
-	patch, e := CreatePatch([]byte(complexBase), []byte(complexC), complex_test_collections, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(complexBase), []byte(complexC), complex_test_collections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -75,7 +75,7 @@ func TestComplexOneAddToArray(t *testing.T) {
 
 // We never remove keys from objects
 func TestComplexVsEmpty(t *testing.T) {
-	patch, e := CreatePatch([]byte(complexBase), []byte(empty), complex_test_collections, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(complexBase), []byte(empty), complex_test_collections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, 0, len(patch), "they should be equal")
 	// sort.Sort(ByPath(patch))

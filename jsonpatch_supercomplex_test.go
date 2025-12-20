@@ -496,13 +496,13 @@ var superComplexTestCollections = Collections{
 }
 
 func TestSuperComplexSame(t *testing.T) {
-	patch, e := CreatePatch([]byte(superComplexBase), []byte(superComplexBase), superComplexTestCollections, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(superComplexBase), []byte(superComplexBase), superComplexTestCollections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, 0, len(patch), "they should be equal")
 }
 
 func TestSuperComplexBoolReplace(t *testing.T) {
-	patch, e := CreatePatch([]byte(superComplexBase), []byte(superComplexA), superComplexTestCollections, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(superComplexBase), []byte(superComplexA), superComplexTestCollections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]

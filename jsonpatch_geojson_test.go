@@ -14,7 +14,7 @@ var geotestCollections = Collections{
 }
 
 func TestPointLineStringReplace(t *testing.T) {
-	patch, e := CreatePatch([]byte(point), []byte(lineString), geotestCollections, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(point), []byte(lineString), geotestCollections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, len(patch), 3, "they should be equal")
 	sort.Sort(ByPath(patch))
@@ -33,7 +33,7 @@ func TestPointLineStringReplace(t *testing.T) {
 }
 
 func TestLineStringPointReplace(t *testing.T) {
-	patch, e := CreatePatch([]byte(lineString), []byte(point), geotestCollections, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(lineString), []byte(point), geotestCollections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	assert.Equal(t, len(patch), 3, "they should be equal")
 	sort.Sort(ByPath(patch))

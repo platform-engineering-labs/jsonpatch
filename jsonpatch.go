@@ -20,9 +20,8 @@ type Key string
 type EntitySets map[Path]Key
 
 type Collections struct {
-	EntitySets    EntitySets
-	Arrays        []Path
-	IgnoredFields []Path
+	EntitySets EntitySets
+	Arrays     []Path
 }
 
 func (c *Collections) isArray(path string) bool {
@@ -129,7 +128,7 @@ func NewPatch(operation, path string, value any) JsonPatchOperation {
 // If ignoreArrayOrder is true, arrays with the same elements but in different order will be considered equal
 //
 // An e rror will be returned if any of the two documents are invalid.
-func CreatePatch(a, b []byte, collections Collections, strategy PatchStrategy) ([]JsonPatchOperation, error) {
+func CreatePatch(a, b []byte, collections Collections, ignoredFields []Path, strategy PatchStrategy) ([]JsonPatchOperation, error) {
 	var aUnmarshalled any
 	var bUnmarshalled any
 
@@ -141,11 +140,11 @@ func CreatePatch(a, b []byte, collections Collections, strategy PatchStrategy) (
 	if err != nil {
 		return nil, errBadJsonDoc
 	}
-	aWithoutIgnoredFields, err := removeIgnoredFields(aUnmarshalled, collections.IgnoredFields)
+	aWithoutIgnoredFields, err := removeIgnoredFields(aUnmarshalled, ignoredFields)
 	if err != nil {
 		return nil, fmt.Errorf("error removing ignored fields from original document: %w", err)
 	}
-	bWithoutIgnoredFields, err := removeIgnoredFields(bUnmarshalled, collections.IgnoredFields)
+	bWithoutIgnoredFields, err := removeIgnoredFields(bUnmarshalled, ignoredFields)
 	if err != nil {
 		return nil, fmt.Errorf("error removing ignored fields from modified document: %w", err)
 	}

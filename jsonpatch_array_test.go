@@ -22,7 +22,7 @@ var (
 )
 
 func TestArrayAddMultipleEmptyObjectsExactMatch(t *testing.T) {
-	patch, e := CreatePatch([]byte(arrayBase), []byte(arrayUpdated), arrayTestCollections, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(arrayBase), []byte(arrayUpdated), arrayTestCollections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	t.Log("Patch:", patch)
 	assert.Equal(t, 1, len(patch), "they should be equal")
@@ -35,7 +35,7 @@ func TestArrayAddMultipleEmptyObjectsExactMatch(t *testing.T) {
 }
 
 func TestArrayRemoveMultipleEmptyObjectsExactMatch(t *testing.T) {
-	patch, e := CreatePatch([]byte(arrayUpdated), []byte(arrayBase), arrayTestCollections, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(arrayUpdated), []byte(arrayBase), arrayTestCollections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	t.Log("Patch:", patch)
 	assert.Equal(t, 1, len(patch), "they should be equal")
@@ -60,7 +60,7 @@ var (
 // TestArrayRemoveSpaceInbetween tests removing one blank item from a group blanks which is in between non blank items which also end with a blank item. This tests that the correct index is removed
 func TestArrayRemoveSpaceInbetween(t *testing.T) {
 	t.Skip("This test fails. TODO change compareArray algorithm to match by index instead of by object equality")
-	patch, e := CreatePatch([]byte(arrayWithSpacesBase), []byte(arrayWithSpacesUpdated), arrayTestCollections, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(arrayWithSpacesBase), []byte(arrayWithSpacesUpdated), arrayTestCollections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	t.Log("Patch:", patch)
 	assert.Equal(t, 1, len(patch), "they should be equal")
@@ -84,7 +84,7 @@ var (
 
 // TestArrayRemoveMulti tests removing multi groups. This tests that the correct index is removed
 func TestArrayRemoveMulti(t *testing.T) {
-	patch, e := CreatePatch([]byte(arrayRemoveMultiBase), []byte(arrayRemoveMultisUpdated), arrayTestCollections, PatchStrategyExactMatch)
+	patch, e := CreatePatch([]byte(arrayRemoveMultiBase), []byte(arrayRemoveMultisUpdated), arrayTestCollections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, e)
 	t.Log("Patch:", patch)
 	assert.Equal(t, 3, len(patch), "they should be equal")

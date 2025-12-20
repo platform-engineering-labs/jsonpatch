@@ -45,7 +45,7 @@ var entitySetTestCollections = Collections{
 }
 
 func TestCreatePatch_AddItemToEntitySet_InEnsureExistsMode_GeneratesAddOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjEntitySet), []byte(simpleObjAddEntitySetItem), entitySetTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(simpleObjEntitySet), []byte(simpleObjAddEntitySetItem), entitySetTestCollections, nil, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -56,7 +56,7 @@ func TestCreatePatch_AddItemToEntitySet_InEnsureExistsMode_GeneratesAddOperation
 }
 
 func TestCreatePatch_AddItemToEntitySet_InExactMatchMode_GeneratesAddOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjEntitySet), []byte(simpleObjAddEntitySetItem), entitySetTestCollections, PatchStrategyExactMatch)
+	patch, err := CreatePatch([]byte(simpleObjEntitySet), []byte(simpleObjAddEntitySetItem), entitySetTestCollections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(patch), "they should be equal")
 	change := patch[0]
@@ -73,7 +73,7 @@ func TestCreatePatch_AddItemToEntitySet_InExactMatchMode_GeneratesAddOperation(t
 }
 
 func TestCreatePatch_ModifyItemInEntitySet_InEnsureExistsMode_GeneratesReplaceOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjEntitySet), []byte(simpleObjModifyEntitySetItem), entitySetTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(simpleObjEntitySet), []byte(simpleObjModifyEntitySetItem), entitySetTestCollections, nil, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -84,7 +84,7 @@ func TestCreatePatch_ModifyItemInEntitySet_InEnsureExistsMode_GeneratesReplaceOp
 }
 
 func TestCreatePatch_RemoveItemFromEntitySet_InExactMatchExistsMode_GeneratesRemoveOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjEntitySet), []byte(simpleObjEntitySetRemoveItem), entitySetTestCollections, PatchStrategyExactMatch)
+	patch, err := CreatePatch([]byte(simpleObjEntitySet), []byte(simpleObjEntitySetRemoveItem), entitySetTestCollections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -93,7 +93,7 @@ func TestCreatePatch_RemoveItemFromEntitySet_InExactMatchExistsMode_GeneratesRem
 }
 
 func TestCreatePatch_ModifyItemInEntitySet_InExactMatchMode_GeneratesARemoveAndAReplaceOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjEntitySet), []byte(simpleObjModifyEntitySetItem), entitySetTestCollections, PatchStrategyExactMatch)
+	patch, err := CreatePatch([]byte(simpleObjEntitySet), []byte(simpleObjModifyEntitySetItem), entitySetTestCollections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(patch), "they should be equal")
 	change := patch[0]
@@ -107,13 +107,13 @@ func TestCreatePatch_ModifyItemInEntitySet_InExactMatchMode_GeneratesARemoveAndA
 }
 
 func TestCreatePatch_AddDuplicateItemToEntitySet_InEnsureExistsMode_GeneratesNoOperations(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjEntitySet), []byte(simpleObjAddDuplicateEntitySetItem), entitySetTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(simpleObjEntitySet), []byte(simpleObjAddDuplicateEntitySetItem), entitySetTestCollections, nil, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(patch), "they should be equal")
 }
 
 func TestCreatePatch_AddDuplicateItemToEntitySet_InExactMatchMode_GeneratesARemoveOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjEntitySet), []byte(simpleObjAddDuplicateEntitySetItem), entitySetTestCollections, PatchStrategyExactMatch)
+	patch, err := CreatePatch([]byte(simpleObjEntitySet), []byte(simpleObjAddDuplicateEntitySetItem), entitySetTestCollections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(patch), "they should be equal")
 	change := patch[0]
@@ -122,7 +122,7 @@ func TestCreatePatch_AddDuplicateItemToEntitySet_InExactMatchMode_GeneratesARemo
 }
 
 func TestCreatePatch_ModifyItemInComplexNestedEntitySet_InEnsureExistsMode_GeneratesReplaceOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(complexNextedEntitySet), []byte(complexNextedEntitySetModifyItem), entitySetTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(complexNextedEntitySet), []byte(complexNextedEntitySetModifyItem), entitySetTestCollections, nil, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(patch), "they should be equal")
 	change := patch[0]
@@ -141,7 +141,7 @@ func TestCreatePatch_ModifyItemInComplexNestedEntitySet_InEnsureExistsMode_Gener
 }
 
 func TestCreatePatch_ModifyItemInComplexNestedEntitySet_InExactMatchMode_GeneratesReplaceOperation(t *testing.T) {
-	patch, err := CreatePatch([]byte(complexNextedEntitySet), []byte(complexNextedEntitySetModifyItem), entitySetTestCollections, PatchStrategyExactMatch)
+	patch, err := CreatePatch([]byte(complexNextedEntitySet), []byte(complexNextedEntitySetModifyItem), entitySetTestCollections, nil, PatchStrategyExactMatch)
 	assert.NoError(t, err)
 	assert.Equal(t, 6, len(patch), "they should be equal")
 	change := patch[0]
@@ -168,7 +168,7 @@ func TestCreatePatch_ModifyItemInComplexNestedEntitySet_InExactMatchMode_Generat
 }
 
 func TestCreatePatch_AddMultipleDuplicateAndFailedItemsToEntitySet_InEnsureExistsMode_GeneratesNoOperations(t *testing.T) {
-	patch, err := CreatePatch([]byte(simpleObjEntitySet), []byte(simpleObjAddMultipleDuplicateAndFailedItems), entitySetTestCollections, PatchStrategyEnsureExists)
+	patch, err := CreatePatch([]byte(simpleObjEntitySet), []byte(simpleObjAddMultipleDuplicateAndFailedItems), entitySetTestCollections, nil, PatchStrategyEnsureExists)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(patch), "they should be equal")
 	change := patch[0]
