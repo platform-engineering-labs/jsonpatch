@@ -426,7 +426,16 @@ func compareArray(av, bv []any, p string, strategy PatchStrategy, collections Co
 			retval = reversed
 		}
 		offset := len(av) - removals
-		processSet(bv, av, func(i int, value any) { retval = append(retval, NewPatch("add", makePath(p, i+offset), value)) })
+		// Use a counter for add operations instead of the target array index.
+		// When some target elements are retained (exist in both source and target),
+		// processSet skips them but still passes their original target index to applyOp.
+		// This causes incorrect indices when there's overlap between source and target.
+		// The counter tracks how many elements have actually been added.
+		addIndex := 0
+		processSet(bv, av, func(_ int, value any) {
+			retval = append(retval, NewPatch("add", makePath(p, addIndex+offset), value))
+			addIndex++
+		})
 	}
 
 	return retval
