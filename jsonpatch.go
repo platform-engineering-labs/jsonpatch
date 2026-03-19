@@ -22,6 +22,7 @@ type EntitySets map[Path]Key
 type Collections struct {
 	EntitySets EntitySets
 	Arrays     []Path
+	Atomics    []Path
 }
 
 func (c *Collections) isArray(path string) bool {
@@ -33,6 +34,11 @@ func (c *Collections) isEntitySet(path string) bool {
 	jsonPath := toJsonPath(path)
 	_, ok := c.EntitySets[Path(jsonPath)]
 	return ok
+}
+
+func (c *Collections) isAtomic(path string) bool {
+	jsonPath := toJsonPath(path)
+	return slices.Contains(c.Atomics, Path(jsonPath))
 }
 
 func (s EntitySets) Add(path Path, key Key) {
@@ -312,6 +318,12 @@ func handleValues(av, bv any, p string, patch []JsonPatchOperation, strategy Pat
 	ignoreArrayOrder := !collections.isArray(p)
 	switch at := av.(type) {
 	case map[string]any:
+		if collections.isAtomic(p) {
+			if !matchesValue(av, bv, false) {
+				patch = append(patch, NewPatch("replace", p, bv))
+			}
+			return patch, nil
+		}
 		bt := bv.(map[string]any)
 		patch, err = diff(at, bt, p, patch, strategy, collections)
 		if err != nil {
