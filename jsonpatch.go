@@ -202,43 +202,33 @@ func matchesValue(av, bv any, ignoreArrayOrder bool) bool {
 		}
 
 		if ignoreArrayOrder {
-			// Check if arrays have the same elements, regardless of order
-			// Create a map of element counts for each array
-			atCount := make(map[string]int)
-			btCount := make(map[string]int)
-
-			// Count elements in first array
-			for _, v := range at {
-				// Convert element to Json string for comparison
-				jsonBytes, err := json.Marshal(v)
-				if err != nil {
-					return false
+			// Recursive multiset equality. An earlier implementation serialised
+			// each element with json.Marshal and compared the multiset of
+			// resulting byte strings. json.Marshal sorts map keys but preserves
+			// array order, so a difference in nested-list ordering inside an
+			// element caused elements with semantically-equal content to hash
+			// to distinct keys, producing a false inequality at this level.
+			//
+			// Instead, pair each element of at with an unused element of bt
+			// whose content is deeply equal ignoring array order. O(n*m) in
+			// the worst case, correct for arbitrary nesting depth.
+			matched := make([]bool, len(bt))
+			for _, ea := range at {
+				found := false
+				for j, eb := range bt {
+					if matched[j] {
+						continue
+					}
+					if matchesValue(ea, eb, ignoreArrayOrder) {
+						matched[j] = true
+						found = true
+						break
+					}
 				}
-				jsonStr := string(jsonBytes)
-				atCount[jsonStr]++
-			}
-
-			// Count elements in second array
-			for _, v := range bt {
-				jsonBytes, err := json.Marshal(v)
-				if err != nil {
-					return false
-				}
-				jsonStr := string(jsonBytes)
-				btCount[jsonStr]++
-			}
-
-			// Compare counts
-			if len(atCount) != len(btCount) {
-				return false
-			}
-
-			for k, v := range atCount {
-				if btCount[k] != v {
+				if !found {
 					return false
 				}
 			}
-
 			return true
 		}
 		// Order matters, check each element in order
