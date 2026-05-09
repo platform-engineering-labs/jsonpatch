@@ -182,3 +182,23 @@ func TestCreatePatch_AddMultipleDuplicateAndFailedItemsToEntitySet_InEnsureExist
 	var expected2 = map[string]any{"k": float64(4), "v": float64(4)}
 	assert.Equal(t, expected2, change.Value, "they should be equal")
 }
+
+// Regression test for the case where an EntitySet collection is populated on
+// the document (actual) side but the field is entirely absent on the patch
+// (desired) side. ExactMatch should produce remove ops for every element so
+// the diff round-trip clears the collection. Previously CreatePatch returned
+// zero ops, silently swallowing the drift — observed as the formae e2e tests
+// `TestSoftReconcile`/`TestHardReconcile`/`TestSimulateApply` failing to
+// reject an apply after an out-of-band tag was added to an IAM Role whose
+// IaC declared no `tags` field.
+func TestCreatePatch_EntitySetAbsentOnDesiredSide_InExactMatchMode_GeneratesRemoveOperation(t *testing.T) {
+	document := `{"a":100, "t":[{"k":1, "v":1}]}`
+	desired := `{"a":100}`
+
+	patch, err := CreatePatch([]byte(document), []byte(desired), entitySetTestCollections, nil, PatchStrategyExactMatch)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(patch), "expected one remove op for the absent EntitySet")
+	change := patch[0]
+	assert.Equal(t, "remove", change.Operation, "operation should be remove")
+	assert.Equal(t, "/t", change.Path, "path should be the EntitySet root")
+}

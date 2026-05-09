@@ -289,17 +289,25 @@ func diff(a, b map[string]any, path string, patch []JsonPatchOperation, strategy
 			return nil, err
 		}
 	}
-	// Leaving this here for now, but the current thinking is that we never remove properties from objects.
-	//	if strategy == PatchStrategyExactMatch {
-	//		// Now add all deleted values as nil
-	//		for key := range a {
-	//			_, found := b[key]
-	//			if !found {
-	//                p := makePath(path, key)
-	//				patch = append(patch, NewPatch("remove", p, nil))
-	//			}
-	//		}
-	//	}
+	// In ExactMatch mode, an EntitySet that is populated on the actual side
+	// but entirely absent from the desired side is drift that needs a remove
+	// op. Without this the caller's "match desired exactly" promise is
+	// silently violated whenever an EntitySet field is populated on actual
+	// but not declared on desired (e.g. an out-of-band Tags entry on a
+	// resource whose IaC declares no tags). Scoped to EntitySet specifically
+	// — Arrays and other types preserve the historical "never remove keys
+	// from objects" contract that callers rely on (see TestComplexVsEmpty).
+	if strategy == PatchStrategyExactMatch {
+		for key := range a {
+			if _, found := b[key]; found {
+				continue
+			}
+			p := makePath(path, key)
+			if collections.isEntitySet(p) {
+				patch = append(patch, NewPatch("remove", p, nil))
+			}
+		}
+	}
 	return patch, nil
 }
 
