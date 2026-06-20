@@ -334,6 +334,18 @@ func handleValues(av, bv any, p string, patch []JsonPatchOperation, strategy Pat
 		}
 		return patch, nil
 	case []any:
+		if collections.isAtomic(p) {
+			// An atomic array is treated as an opaque whole value: when its
+			// (order-insensitive) content differs, emit a single replace rather
+			// than per-element remove+add. Some providers — notably AWS Cloud
+			// Control for mutually-exclusive lists like NetworkFirewall
+			// FirewallPolicy.StatefulDefaultActions — do not reliably apply a
+			// remove+add pair, leaving both the old and new values present.
+			if !matchesValue(av, bv, true) {
+				patch = append(patch, NewPatch("replace", p, bv))
+			}
+			return patch, nil
+		}
 		bt, replaceWithOtherCollection := bv.([]any)
 		switch {
 		case !replaceWithOtherCollection:

@@ -144,3 +144,81 @@ func TestAtomicField_ExtraKeysInActual_SingleReplace(t *testing.T) {
 		t.Errorf("expected path /Policy, got %s", patch[0].Path)
 	}
 }
+
+func TestAtomicField_Array_SingleReplace(t *testing.T) {
+	// An array field marked Atomic must produce a single whole-array replace,
+	// not per-element remove+add. AWS Cloud Control does not reliably apply a
+	// remove+add pair against a mutually-exclusive list (e.g. NetworkFirewall
+	// FirewallPolicy.StatefulDefaultActions), leaving both old and new values.
+	a := `{"L": ["aws:drop_strict"]}`
+	b := `{"L": ["aws:drop_established"]}`
+
+	collections := Collections{
+		Atomics: []Path{"$.L"},
+	}
+
+	patch, err := CreatePatch([]byte(a), []byte(b), collections, nil, PatchStrategyExactMatch)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(patch) != 1 {
+		t.Fatalf("expected 1 patch operation, got %d: %v", len(patch), patch)
+	}
+	if patch[0].Operation != "replace" {
+		t.Errorf("expected replace operation, got %s", patch[0].Operation)
+	}
+	if patch[0].Path != "/L" {
+		t.Errorf("expected path /L, got %s", patch[0].Path)
+	}
+}
+
+func TestAtomicField_NestedArray_SingleReplace(t *testing.T) {
+	// The PLA-37 shape: an array nested inside an object, addressed by a dotted
+	// hint key (FirewallPolicy.StatefulDefaultActions -> $.FirewallPolicy.StatefulDefaultActions).
+	a := `{"FirewallPolicy": {"StatefulDefaultActions": ["aws:drop_strict"]}}`
+	b := `{"FirewallPolicy": {"StatefulDefaultActions": ["aws:drop_established"]}}`
+
+	collections := Collections{
+		Atomics: []Path{"$.FirewallPolicy.StatefulDefaultActions"},
+	}
+
+	patch, err := CreatePatch([]byte(a), []byte(b), collections, nil, PatchStrategyExactMatch)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(patch) != 1 {
+		t.Fatalf("expected 1 patch operation, got %d: %v", len(patch), patch)
+	}
+	if patch[0].Operation != "replace" {
+		t.Errorf("expected replace operation, got %s", patch[0].Operation)
+	}
+	if patch[0].Path != "/FirewallPolicy/StatefulDefaultActions" {
+		t.Errorf("expected path /FirewallPolicy/StatefulDefaultActions, got %s", patch[0].Path)
+	}
+	if v, ok := patch[0].Value.([]any); !ok || len(v) != 1 || v[0] != "aws:drop_established" {
+		t.Errorf("expected value [aws:drop_established], got %v", patch[0].Value)
+	}
+}
+
+func TestAtomicField_Array_EqualContent_NoPatch(t *testing.T) {
+	// Atomic array equal in content (set semantics) must produce no patch — even
+	// when element order differs — to avoid a perpetual drift loop when the
+	// provider returns the same values in a different order.
+	a := `{"L": ["a", "b"]}`
+	b := `{"L": ["b", "a"]}`
+
+	collections := Collections{
+		Atomics: []Path{"$.L"},
+	}
+
+	patch, err := CreatePatch([]byte(a), []byte(b), collections, nil, PatchStrategyExactMatch)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(patch) != 0 {
+		t.Fatalf("expected 0 patch operations, got %d: %v", len(patch), patch)
+	}
+}
