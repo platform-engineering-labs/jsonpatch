@@ -85,7 +85,6 @@ type PatchStrategy string
 const (
 	PatchStrategyExactMatch   PatchStrategy = "exact-match"
 	PatchStrategyEnsureExists PatchStrategy = "ensure-exists"
-	PatchStrategyEnsureAbsent PatchStrategy = "ensure-absent"
 )
 
 type JsonPatchOperation struct {
@@ -268,7 +267,6 @@ func makePath(path string, newPart any) string {
 
 // diff returns the (recursive) difference between a and b as an array of JsonPatchOperations.
 func diff(a, b map[string]any, path string, patch []JsonPatchOperation, strategy PatchStrategy, collections Collections) ([]JsonPatchOperation, error) {
-	//TODO: handle EnsureAbsent strategy
 	for key, bv := range b {
 		p := makePath(path, key)
 		av, ok := a[key]
@@ -434,7 +432,6 @@ func compareArray(av, bv []any, p string, strategy PatchStrategy, collections Co
 			return retval
 		}
 		// TODO: removing is not tested yest!
-		// also we need to check for PatchStrategyEnsureAbsent
 		removals := 0
 		if strategy == PatchStrategyExactMatch {
 			// Find elements that need to be removed
@@ -602,8 +599,6 @@ func processArray(av, bv []any, applyOp func(i int, value any), strategy PatchSt
 				applyOp(i+offset, v)
 			}
 		}
-		return
-	case PatchStrategyEnsureAbsent:
 		return
 	}
 }
