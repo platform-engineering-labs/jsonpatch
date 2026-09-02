@@ -327,8 +327,25 @@ func diff(a, b map[string]any, path string, patch []JsonPatchOperation, strategy
 				continue
 			}
 			p := makePath(path, key)
+			// WHOLE-FIELD TOLERANCE: a field that is itself co-owned is
+			// tolerated whole when omitted from desired — a Drainable
+			// cannot authorize removing members that were never compared.
+			// This takes precedence over the EntitySet whole-field remove
+			// below.
+			if _, fieldCoOwned := collections.drainable(p); fieldCoOwned {
+				continue
+			}
 			if collections.isEntitySet(p) {
 				patch = append(patch, NewPatch("remove", p, nil))
+				continue
+			}
+			// MEMBER DRAIN: the object being diffed sits at a co-owned path;
+			// remove a missing key only when it is in that path's Drainable
+			// set. Every other missing key is tolerated.
+			if d, coOwned := collections.drainable(path); coOwned {
+				if _, ok := d[key]; ok {
+					patch = append(patch, NewPatch("remove", p, nil))
+				}
 			}
 		}
 	}

@@ -70,3 +70,59 @@ func TestCoOwnedEntitySetStillUpdatesMatchedElements(t *testing.T) {
 	assert.Equal(t, 1, len(ops))
 	assert.Equal(t, "replace", ops[0].Operation)
 }
+
+func TestCoOwnedObjectDrainsOnlyDrainableKeys(t *testing.T) {
+	a := []byte(`{"labels":{"mine":"1","theirs":"2"}}`)
+	b := []byte(`{"labels":{}}`)
+	c := Collections{CoOwned: CoOwned{Path("$.labels"): Drainable{"mine": {}}}}
+	ops, err := CreatePatch(a, b, c, nil, PatchStrategyExactMatch)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(ops))
+	assert.Equal(t, "remove", ops[0].Operation)
+	assert.Equal(t, "/labels/mine", ops[0].Path)
+}
+
+func TestPlainObjectKeysStillNeverRemoved(t *testing.T) {
+	a := []byte(`{"labels":{"x":"1"}}`)
+	b := []byte(`{"labels":{}}`)
+	ops, err := CreatePatch(a, b, Collections{}, nil, PatchStrategyExactMatch)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(ops))
+}
+
+func TestCoOwnedObjectPatchModeNeverDrains(t *testing.T) {
+	a := []byte(`{"labels":{"mine":"1","theirs":"2"}}`)
+	b := []byte(`{"labels":{}}`)
+	c := Collections{CoOwned: CoOwned{Path("$.labels"): Drainable{"mine": {}}}}
+	ops, err := CreatePatch(a, b, c, nil, PatchStrategyEnsureExists)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(ops))
+}
+
+// An omitted co-owned entity-set field is whole-field tolerated (no ops),
+// where a plain entity-set field absent from desired is removed whole today.
+func TestOmittedCoOwnedEntitySetFieldTolerated(t *testing.T) {
+	a := []byte(`{"attrs":[{"Key":"theirs","Value":"1"}]}`)
+	b := []byte(`{}`)
+	c := Collections{
+		EntitySets: EntitySets{Path("$.attrs"): Key("Key")},
+		CoOwned:    CoOwned{Path("$.attrs"): Drainable{`"anything"`: {}}},
+	}
+	ops, err := CreatePatch(a, b, c, nil, PatchStrategyExactMatch)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(ops))
+}
+
+// A drainable key containing "/" is escaped per RFC6901 in the op path,
+// matching makePath's own escaping behavior.
+func TestCoOwnedObjectDrainEscapesSlashInKey(t *testing.T) {
+	key := "app.kubernetes.io/name"
+	a := []byte(`{"labels":{"` + key + `":"x"}}`)
+	b := []byte(`{"labels":{}}`)
+	c := Collections{CoOwned: CoOwned{Path("$.labels"): Drainable{key: {}}}}
+	ops, err := CreatePatch(a, b, c, nil, PatchStrategyExactMatch)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(ops))
+	assert.Equal(t, "remove", ops[0].Operation)
+	assert.Equal(t, makePath("/labels", key), ops[0].Path)
+}
