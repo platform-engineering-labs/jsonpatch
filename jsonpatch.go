@@ -450,13 +450,21 @@ func compareArray(av, bv []any, p string, strategy PatchStrategy, collections Co
 		}
 		// TODO: removing is not tested yest!
 		removals := 0
+		// Original actual-array indices that get an emitted remove op below,
+		// in ascending order (av is a slice, so the loop that appends to this
+		// visits indices in increasing order already). A matched member's
+		// update path must be shifted down by however many of these are
+		// below its own original index, since those removes apply first and
+		// shift every element above them down by one.
+		var removedIndices []int
 		if strategy == PatchStrategyExactMatch {
 			// Find elements that need to be removed
 			elementsBeforeRemove := len(retval)
 			processIdentitySet(av, bv, p, func(i, o int, value any) {
 				retval = append(retval, NewPatch("remove", makePath(p, i), nil))
+				removedIndices = append(removedIndices, i)
 			}, func(ops []JsonPatchOperation) { // no-op
-			}, strategy, collections, true)
+			}, strategy, collections, true, nil)
 			removals = len(retval) - elementsBeforeRemove
 			reversed := make([]JsonPatchOperation, len(retval))
 			for i := range retval {
@@ -469,7 +477,7 @@ func compareArray(av, bv []any, p string, strategy PatchStrategy, collections Co
 			retval = append(retval, NewPatch("add", makePath(p, o+offset), value))
 		}, func(ops []JsonPatchOperation) {
 			retval = append(retval, ops...)
-		}, strategy, collections, false)
+		}, strategy, collections, false, removedIndices)
 	default: // default to set
 		if len(av) == len(bv) && matchesValue(av, bv, true) {
 			return retval
@@ -552,6 +560,20 @@ func processSet(av, bv []any, applyOp func(i int, value any)) {
 	}
 }
 
+// removalsBelow returns how many of the removed original indices are less
+// than idx — the amount idx has shifted down once those removes apply.
+// removed is expected in ascending order (its only source, the removal loop
+// in compareArray, appends while walking a slice in index order).
+func removalsBelow(removed []int, idx int) int {
+	n := 0
+	for _, r := range removed {
+		if r < idx {
+			n++
+		}
+	}
+	return n
+}
+
 // processIdentitySet identifies entity-set elements of av that are absent
 // from bv (by their EntitySets key), calling applyOp for each. When
 // restrictRemovals is true and path is co-owned, an absent element is only
@@ -559,7 +581,14 @@ func processSet(av, bv []any, applyOp func(i int, value any)) {
 // set — every other absent element is tolerated (no call at all). Pass false
 // for the invocation that computes additions: CoOwned restricts removals
 // only, never additions.
-func processIdentitySet(av, bv []any, path string, applyOp func(i, o int, value any), replaceOps func(ops []JsonPatchOperation), strategy PatchStrategy, collections Collections, restrictRemovals bool) {
+//
+// removedIndices are the original bv-array indices that already got an
+// emitted remove op (from the prior removal-computing call over the same
+// pair, swapped). A matched member's update path is addressed at its
+// position AFTER those removes apply, not its original position: pass nil
+// when no removals were computed (EnsureExists, or the removal-computing
+// call itself, whose replaceOps is a no-op).
+func processIdentitySet(av, bv []any, path string, applyOp func(i, o int, value any), replaceOps func(ops []JsonPatchOperation), strategy PatchStrategy, collections Collections, restrictRemovals bool, removedIndices []int) {
 	foundIndexes := make(map[int]struct{}, len(av))
 	lookup := make(map[string]int)
 	identities := make(map[int]string, len(av))
@@ -592,7 +621,8 @@ func processIdentitySet(av, bv []any, path string, applyOp func(i, o int, value 
 		identities[i] = jsonStr
 		if index, ok := lookup[jsonStr]; ok {
 			foundIndexes[i] = struct{}{}
-			updateOps, err := handleValues(bv[index], v, fmt.Sprintf("%s/%d", path, lookup[jsonStr]), []JsonPatchOperation{}, strategy, collections)
+			adjustedIndex := index - removalsBelow(removedIndices, index)
+			updateOps, err := handleValues(bv[index], v, fmt.Sprintf("%s/%d", path, adjustedIndex), []JsonPatchOperation{}, strategy, collections)
 			if err != nil {
 				return
 			}
