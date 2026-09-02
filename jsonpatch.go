@@ -19,10 +19,24 @@ type Path string
 type Key string
 type EntitySets map[Path]Key
 
+// Drainable is the set of member identities remove operations may target on a
+// co-owned path. Identity encoding is the caller's: for a plain set listing the
+// canonical JSON of the element (the same encoding processSet keys on), for an
+// entity set the JSON-marshaled index-field value, for an object path the raw
+// key string.
+type Drainable map[string]struct{}
+
+// CoOwned restricts removals per path: on a co-owned path only members whose
+// identity is in the path's Drainable set may be removed; every other surplus
+// member is tolerated (no op of any kind). A path absent from the map is not
+// co-owned. An empty Drainable tolerates everything.
+type CoOwned map[Path]Drainable
+
 type Collections struct {
 	EntitySets EntitySets
 	Arrays     []Path
 	Atomics    []Path
+	CoOwned    CoOwned
 }
 
 func (c *Collections) isArray(path string) bool {
@@ -39,6 +53,16 @@ func (c *Collections) isEntitySet(path string) bool {
 func (c *Collections) isAtomic(path string) bool {
 	jsonPath := toJsonPath(path)
 	return slices.Contains(c.Atomics, Path(jsonPath))
+}
+
+// drainable returns the Drainable set for path and whether path is co-owned
+// at all. A nil CoOwned map is treated as "no path is co-owned".
+func (c *Collections) drainable(path string) (Drainable, bool) {
+	if c.CoOwned == nil {
+		return nil, false
+	}
+	d, ok := c.CoOwned[Path(toJsonPath(path))]
+	return d, ok
 }
 
 func (s EntitySets) Add(path Path, key Key) {
@@ -303,8 +327,25 @@ func diff(a, b map[string]any, path string, patch []JsonPatchOperation, strategy
 				continue
 			}
 			p := makePath(path, key)
+			// WHOLE-FIELD TOLERANCE: a field that is itself co-owned is
+			// tolerated whole when omitted from desired — a Drainable
+			// cannot authorize removing members that were never compared.
+			// This takes precedence over the EntitySet whole-field remove
+			// below.
+			if _, fieldCoOwned := collections.drainable(p); fieldCoOwned {
+				continue
+			}
 			if collections.isEntitySet(p) {
 				patch = append(patch, NewPatch("remove", p, nil))
+				continue
+			}
+			// MEMBER DRAIN: the object being diffed sits at a co-owned path;
+			// remove a missing key only when it is in that path's Drainable
+			// set. Every other missing key is tolerated.
+			if d, coOwned := collections.drainable(path); coOwned {
+				if _, ok := d[key]; ok {
+					patch = append(patch, NewPatch("remove", p, nil))
+				}
 			}
 		}
 	}
@@ -409,13 +450,21 @@ func compareArray(av, bv []any, p string, strategy PatchStrategy, collections Co
 		}
 		// TODO: removing is not tested yest!
 		removals := 0
+		// Original actual-array indices that get an emitted remove op below,
+		// in ascending order (av is a slice, so the loop that appends to this
+		// visits indices in increasing order already). A matched member's
+		// update path must be shifted down by however many of these are
+		// below its own original index, since those removes apply first and
+		// shift every element above them down by one.
+		var removedIndices []int
 		if strategy == PatchStrategyExactMatch {
 			// Find elements that need to be removed
 			elementsBeforeRemove := len(retval)
 			processIdentitySet(av, bv, p, func(i, o int, value any) {
 				retval = append(retval, NewPatch("remove", makePath(p, i), nil))
+				removedIndices = append(removedIndices, i)
 			}, func(ops []JsonPatchOperation) { // no-op
-			}, strategy, collections)
+			}, strategy, collections, true, nil)
 			removals = len(retval) - elementsBeforeRemove
 			reversed := make([]JsonPatchOperation, len(retval))
 			for i := range retval {
@@ -428,7 +477,7 @@ func compareArray(av, bv []any, p string, strategy PatchStrategy, collections Co
 			retval = append(retval, NewPatch("add", makePath(p, o+offset), value))
 		}, func(ops []JsonPatchOperation) {
 			retval = append(retval, ops...)
-		}, strategy, collections)
+		}, strategy, collections, false, removedIndices)
 	default: // default to set
 		if len(av) == len(bv) && matchesValue(av, bv, true) {
 			return retval
@@ -439,7 +488,19 @@ func compareArray(av, bv []any, p string, strategy PatchStrategy, collections Co
 		if strategy == PatchStrategyExactMatch {
 			// Find elements that need to be removed
 			elementsBeforeRemove := len(retval)
-			processSet(av, bv, func(i int, value any) { retval = append(retval, NewPatch("remove", makePath(p, i), nil)) })
+			d, coOwned := collections.drainable(p)
+			processSet(av, bv, func(i int, value any) {
+				if coOwned {
+					jsonBytes, err := json.Marshal(value)
+					if err != nil {
+						return
+					}
+					if _, ok := d[string(jsonBytes)]; !ok {
+						return
+					}
+				}
+				retval = append(retval, NewPatch("remove", makePath(p, i), nil))
+			})
 			removals = len(retval) - elementsBeforeRemove
 			reversed := make([]JsonPatchOperation, len(retval))
 			for i := range retval {
@@ -499,9 +560,38 @@ func processSet(av, bv []any, applyOp func(i int, value any)) {
 	}
 }
 
-func processIdentitySet(av, bv []any, path string, applyOp func(i, o int, value any), replaceOps func(ops []JsonPatchOperation), strategy PatchStrategy, collections Collections) {
+// removalsBelow returns how many of the removed original indices are less
+// than idx — the amount idx has shifted down once those removes apply.
+// removed is expected in ascending order (its only source, the removal loop
+// in compareArray, appends while walking a slice in index order).
+func removalsBelow(removed []int, idx int) int {
+	n := 0
+	for _, r := range removed {
+		if r < idx {
+			n++
+		}
+	}
+	return n
+}
+
+// processIdentitySet identifies entity-set elements of av that are absent
+// from bv (by their EntitySets key), calling applyOp for each. When
+// restrictRemovals is true and path is co-owned, an absent element is only
+// passed to applyOp when its key value's identity is in the path's Drainable
+// set — every other absent element is tolerated (no call at all). Pass false
+// for the invocation that computes additions: CoOwned restricts removals
+// only, never additions.
+//
+// removedIndices are the original bv-array indices that already got an
+// emitted remove op (from the prior removal-computing call over the same
+// pair, swapped). A matched member's update path is addressed at its
+// position AFTER those removes apply, not its original position: pass nil
+// when no removals were computed (EnsureExists, or the removal-computing
+// call itself, whose replaceOps is a no-op).
+func processIdentitySet(av, bv []any, path string, applyOp func(i, o int, value any), replaceOps func(ops []JsonPatchOperation), strategy PatchStrategy, collections Collections, restrictRemovals bool, removedIndices []int) {
 	foundIndexes := make(map[int]struct{}, len(av))
 	lookup := make(map[string]int)
+	identities := make(map[int]string, len(av))
 
 	for i, v := range bv {
 		key, ok := collections.EntitySets.Get(Path(toJsonPath(path)))
@@ -528,9 +618,11 @@ func processIdentitySet(av, bv []any, path string, applyOp func(i, o int, value 
 		}
 
 		jsonStr := string(jsonBytes)
+		identities[i] = jsonStr
 		if index, ok := lookup[jsonStr]; ok {
 			foundIndexes[i] = struct{}{}
-			updateOps, err := handleValues(bv[index], v, fmt.Sprintf("%s/%d", path, lookup[jsonStr]), []JsonPatchOperation{}, strategy, collections)
+			adjustedIndex := index - removalsBelow(removedIndices, index)
+			updateOps, err := handleValues(bv[index], v, fmt.Sprintf("%s/%d", path, adjustedIndex), []JsonPatchOperation{}, strategy, collections)
 			if err != nil {
 				return
 			}
@@ -538,9 +630,15 @@ func processIdentitySet(av, bv []any, path string, applyOp func(i, o int, value 
 		}
 	}
 
+	drainable, coOwned := collections.drainable(path)
 	offset := 0
 	for i, v := range av {
 		if _, ok := foundIndexes[i]; !ok {
+			if restrictRemovals && coOwned {
+				if _, ok := drainable[identities[i]]; !ok {
+					continue
+				}
+			}
 			applyOp(i, offset, v)
 			offset++
 		}

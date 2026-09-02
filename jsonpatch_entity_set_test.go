@@ -101,7 +101,7 @@ func TestCreatePatch_ModifyItemInEntitySet_InExactMatchMode_GeneratesARemoveAndA
 	assert.Equal(t, "/t/0", change.Path, "they should be equal")
 	change = patch[1]
 	assert.Equal(t, "replace", change.Operation, "they should be equal")
-	assert.Equal(t, "/t/1/v", change.Path, "they should be equal")
+	assert.Equal(t, "/t/0/v", change.Path, "they should be equal")
 	var expected float64 = 3
 	assert.Equal(t, expected, change.Value, "they should be equal")
 }
@@ -149,21 +149,21 @@ func TestCreatePatch_ModifyItemInComplexNestedEntitySet_InExactMatchMode_Generat
 	assert.Equal(t, "/t/0", change.Path, "they should be equal")
 	change = patch[1]
 	assert.Equal(t, "replace", change.Operation, "they should be equal")
-	assert.Equal(t, "/t/1/v/0/c", change.Path, "they should be equal")
+	assert.Equal(t, "/t/0/v/0/c", change.Path, "they should be equal")
 	assert.Equal(t, "zz", change.Value, "they should be equal")
 	change = patch[2]
 	assert.Equal(t, "remove", change.Operation, "they should be equal")
-	assert.Equal(t, "/t/1/v/0/d/1", change.Path, "they should be equal")
+	assert.Equal(t, "/t/0/v/0/d/1", change.Path, "they should be equal")
 	change = patch[3]
 	assert.Equal(t, "remove", change.Operation, "they should be equal")
-	assert.Equal(t, "/t/1/v/0/d/0", change.Path, "they should be equal")
+	assert.Equal(t, "/t/0/v/0/d/0", change.Path, "they should be equal")
 	change = patch[4]
 	assert.Equal(t, "add", change.Operation, "they should be equal")
-	assert.Equal(t, "/t/1/v/0/d/0", change.Path, "they should be equal")
+	assert.Equal(t, "/t/0/v/0/d/0", change.Path, "they should be equal")
 	assert.Equal(t, float64(7), change.Value, "they should be equal")
 	change = patch[5]
 	assert.Equal(t, "add", change.Operation, "they should be equal")
-	assert.Equal(t, "/t/1/v/0/d/1", change.Path, "they should be equal")
+	assert.Equal(t, "/t/0/v/0/d/1", change.Path, "they should be equal")
 	assert.Equal(t, float64(8), change.Value, "they should be equal")
 }
 
