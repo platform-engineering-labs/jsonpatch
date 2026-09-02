@@ -439,7 +439,7 @@ func compareArray(av, bv []any, p string, strategy PatchStrategy, collections Co
 			processIdentitySet(av, bv, p, func(i, o int, value any) {
 				retval = append(retval, NewPatch("remove", makePath(p, i), nil))
 			}, func(ops []JsonPatchOperation) { // no-op
-			}, strategy, collections)
+			}, strategy, collections, true)
 			removals = len(retval) - elementsBeforeRemove
 			reversed := make([]JsonPatchOperation, len(retval))
 			for i := range retval {
@@ -452,7 +452,7 @@ func compareArray(av, bv []any, p string, strategy PatchStrategy, collections Co
 			retval = append(retval, NewPatch("add", makePath(p, o+offset), value))
 		}, func(ops []JsonPatchOperation) {
 			retval = append(retval, ops...)
-		}, strategy, collections)
+		}, strategy, collections, false)
 	default: // default to set
 		if len(av) == len(bv) && matchesValue(av, bv, true) {
 			return retval
@@ -535,9 +535,17 @@ func processSet(av, bv []any, applyOp func(i int, value any)) {
 	}
 }
 
-func processIdentitySet(av, bv []any, path string, applyOp func(i, o int, value any), replaceOps func(ops []JsonPatchOperation), strategy PatchStrategy, collections Collections) {
+// processIdentitySet identifies entity-set elements of av that are absent
+// from bv (by their EntitySets key), calling applyOp for each. When
+// restrictRemovals is true and path is co-owned, an absent element is only
+// passed to applyOp when its key value's identity is in the path's Drainable
+// set — every other absent element is tolerated (no call at all). Pass false
+// for the invocation that computes additions: CoOwned restricts removals
+// only, never additions.
+func processIdentitySet(av, bv []any, path string, applyOp func(i, o int, value any), replaceOps func(ops []JsonPatchOperation), strategy PatchStrategy, collections Collections, restrictRemovals bool) {
 	foundIndexes := make(map[int]struct{}, len(av))
 	lookup := make(map[string]int)
+	identities := make(map[int]string, len(av))
 
 	for i, v := range bv {
 		key, ok := collections.EntitySets.Get(Path(toJsonPath(path)))
@@ -564,6 +572,7 @@ func processIdentitySet(av, bv []any, path string, applyOp func(i, o int, value 
 		}
 
 		jsonStr := string(jsonBytes)
+		identities[i] = jsonStr
 		if index, ok := lookup[jsonStr]; ok {
 			foundIndexes[i] = struct{}{}
 			updateOps, err := handleValues(bv[index], v, fmt.Sprintf("%s/%d", path, lookup[jsonStr]), []JsonPatchOperation{}, strategy, collections)
@@ -574,9 +583,15 @@ func processIdentitySet(av, bv []any, path string, applyOp func(i, o int, value 
 		}
 	}
 
+	drainable, coOwned := collections.drainable(path)
 	offset := 0
 	for i, v := range av {
 		if _, ok := foundIndexes[i]; !ok {
+			if restrictRemovals && coOwned {
+				if _, ok := drainable[identities[i]]; !ok {
+					continue
+				}
+			}
 			applyOp(i, offset, v)
 			offset++
 		}

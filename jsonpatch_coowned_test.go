@@ -43,3 +43,30 @@ func TestNonCoOwnedSetUnchanged(t *testing.T) {
 	assert.Equal(t, 1, len(ops))
 	assert.Equal(t, "remove", ops[0].Operation)
 }
+
+func TestCoOwnedEntitySetDrainsOnlyDrainableKeys(t *testing.T) {
+	a := []byte(`{"attrs":[{"Key":"theirs","Value":"1"},{"Key":"mine","Value":"2"}]}`)
+	b := []byte(`{"attrs":[]}`)
+	c := Collections{
+		EntitySets: EntitySets{Path("$.attrs"): Key("Key")},
+		CoOwned:    CoOwned{Path("$.attrs"): Drainable{`"mine"`: {}}},
+	}
+	ops, err := CreatePatch(a, b, c, nil, PatchStrategyExactMatch)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(ops))
+	assert.Equal(t, "remove", ops[0].Operation)
+	assert.Equal(t, "/attrs/1", ops[0].Path)
+}
+
+func TestCoOwnedEntitySetStillUpdatesMatchedElements(t *testing.T) {
+	a := []byte(`{"attrs":[{"Key":"theirs","Value":"1"},{"Key":"mine","Value":"old"}]}`)
+	b := []byte(`{"attrs":[{"Key":"mine","Value":"new"}]}`)
+	c := Collections{
+		EntitySets: EntitySets{Path("$.attrs"): Key("Key")},
+		CoOwned:    CoOwned{Path("$.attrs"): Drainable{}},
+	}
+	ops, err := CreatePatch(a, b, c, nil, PatchStrategyExactMatch)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(ops))
+	assert.Equal(t, "replace", ops[0].Operation)
+}
