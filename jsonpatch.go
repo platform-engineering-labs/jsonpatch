@@ -19,10 +19,24 @@ type Path string
 type Key string
 type EntitySets map[Path]Key
 
+// Drainable is the set of member identities remove operations may target on a
+// co-owned path. Identity encoding is the caller's: for a plain set listing the
+// canonical JSON of the element (the same encoding processSet keys on), for an
+// entity set the JSON-marshaled index-field value, for an object path the raw
+// key string.
+type Drainable map[string]struct{}
+
+// CoOwned restricts removals per path: on a co-owned path only members whose
+// identity is in the path's Drainable set may be removed; every other surplus
+// member is tolerated (no op of any kind). A path absent from the map is not
+// co-owned. An empty Drainable tolerates everything.
+type CoOwned map[Path]Drainable
+
 type Collections struct {
 	EntitySets EntitySets
 	Arrays     []Path
 	Atomics    []Path
+	CoOwned    CoOwned
 }
 
 func (c *Collections) isArray(path string) bool {
@@ -39,6 +53,16 @@ func (c *Collections) isEntitySet(path string) bool {
 func (c *Collections) isAtomic(path string) bool {
 	jsonPath := toJsonPath(path)
 	return slices.Contains(c.Atomics, Path(jsonPath))
+}
+
+// drainable returns the Drainable set for path and whether path is co-owned
+// at all. A nil CoOwned map is treated as "no path is co-owned".
+func (c *Collections) drainable(path string) (Drainable, bool) {
+	if c.CoOwned == nil {
+		return nil, false
+	}
+	d, ok := c.CoOwned[Path(toJsonPath(path))]
+	return d, ok
 }
 
 func (s EntitySets) Add(path Path, key Key) {
@@ -439,7 +463,19 @@ func compareArray(av, bv []any, p string, strategy PatchStrategy, collections Co
 		if strategy == PatchStrategyExactMatch {
 			// Find elements that need to be removed
 			elementsBeforeRemove := len(retval)
-			processSet(av, bv, func(i int, value any) { retval = append(retval, NewPatch("remove", makePath(p, i), nil)) })
+			d, coOwned := collections.drainable(p)
+			processSet(av, bv, func(i int, value any) {
+				if coOwned {
+					jsonBytes, err := json.Marshal(value)
+					if err != nil {
+						return
+					}
+					if _, ok := d[string(jsonBytes)]; !ok {
+						return
+					}
+				}
+				retval = append(retval, NewPatch("remove", makePath(p, i), nil))
+			})
 			removals = len(retval) - elementsBeforeRemove
 			reversed := make([]JsonPatchOperation, len(retval))
 			for i := range retval {
