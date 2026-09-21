@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 	"strconv"
@@ -293,7 +294,9 @@ func makePath(path string, newPart any) string {
 // diff returns the (recursive) difference between a and b as an array of JsonPatchOperations.
 func diff(a, b map[string]any, path string, patch []JsonPatchOperation, strategy PatchStrategy, collections Collections) ([]JsonPatchOperation, error) {
 	//TODO: handle EnsureAbsent strategy
-	for key, bv := range b {
+	// Sort object keys without reordering the operations within each value.
+	for _, key := range slices.Sorted(maps.Keys(b)) {
+		bv := b[key]
 		p := makePath(path, key)
 		av, ok := a[key]
 		// If the key is not present in a, add it
@@ -322,7 +325,7 @@ func diff(a, b map[string]any, path string, patch []JsonPatchOperation, strategy
 	// — Arrays and other types preserve the historical "never remove keys
 	// from objects" contract that callers rely on (see TestComplexVsEmpty).
 	if strategy == PatchStrategyExactMatch {
-		for key := range a {
+		for _, key := range slices.Sorted(maps.Keys(a)) {
 			if _, found := b[key]; found {
 				continue
 			}
